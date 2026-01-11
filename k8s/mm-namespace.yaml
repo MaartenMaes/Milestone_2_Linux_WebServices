@@ -1,16 +1,10 @@
-# API version for Namespace resource
 apiVersion: v1
 
-# Kind specifies the resource type
 kind: Namespace
 
-# Metadata contains identifying information
 metadata:
-  # Name of the namespace
-  # Creates logical boundary for resources
   name: mm-project
   
-  # Labels for organization and querying
   labels:
     name: mm-project
     environment: development
