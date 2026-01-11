@@ -1,48 +1,19 @@
-# Docker Compose version 3.8 supports all features we need
-# Version 3+ requires Docker Engine 19.03.0+
 version: '3.8'
 
-# Services define the containers that will run
 services:
-  # ==========================================
-  # MONGODB DATABASE SERVICE
-  # ==========================================
   mm-database:
-    # Use official MongoDB image from Docker Hub
-    # 7.0-alpine is the latest stable version with Alpine Linux (lightweight)
     image: mongo:7.0
-    
-    # Container name for easy reference
-    # Using mm- prefix to identify this project
     container_name: mm-database
-    
-    # Configure container restart policy
-    # always: restart even if it exits with code 0
     restart: always
-    
-    # Volume mounts - persist data outside the container
-    # Named volume 'mongodb_data' is created and managed by Docker
-    # This ensures data survives container restarts
     volumes:
       - mongodb_data:/data/db
       - mongodb_config:/data/configdb
-    
-    # Port mapping: HOST:CONTAINER
-    # 27017 is MongoDB's default port
-    # Only expose to internal Docker network, not host
     ports:
       - "27017:27017"
-    
-    # Environment variables passed to MongoDB
-    # MONGO_INITDB_ROOT_USERNAME sets root username for authentication
-    # MONGO_INITDB_ROOT_PASSWORD sets root password
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: rootpassword
       MONGO_INITDB_DATABASE: milestone2
-    
-    # Health check for MongoDB
-    # Checks if MongoDB is responding to commands
     healthcheck:
       test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
       interval: 10s
@@ -50,7 +21,6 @@ services:
       retries: 5
       start_period: 10s
     
-    # Resource limits to prevent runaway resource usage
     deploy:
       resources:
         limits:
@@ -60,101 +30,50 @@ services:
           cpus: '0.25'
           memory: 256M
 
-  # ==========================================
-  # NODE.JS API SERVICE
-  # ==========================================
   mm-api:
-    # Build image from local Dockerfile
-    # Specifies path to Dockerfile and build context
     build:
       context: ./api
       dockerfile: Dockerfile
     
-    # Container name for reference
     container_name: mm-api
     
-    # Restart policy: always restart if stopped
     restart: always
     
-    # Port mapping: expose port 3000 to host
     ports:
       - "3000:3000"
-    
-    # Environment variables for the application
-    # MONGO_URI specifies MongoDB connection string
-    # MongoDB service name (mm-database) resolves via Docker DNS
-    # This replaces localhost because containers have separate network namespaces
+  
     environment:
       MONGO_URI: mongodb://root:rootpassword@mm-database:27017/milestone2?authSource=admin
       NODE_ENV: production
     
-    # Declare dependency on database service
-    # API container won't start until database is healthy
     depends_on:
       mm-database:
         condition: service_healthy
     
-    # Volume for application source code (useful for development)
-    # Removed in production but helpful for local testing
-    # volumes:
-    #   - ./api:/app
-    #   - /app/node_modules
-    
-    # Resource limits
     deploy:
       resources:
         limits:
           cpus: '0.5'
           memory: 256M
 
-  # ==========================================
-  # HTTPD FRONTEND SERVICE
-  # ==========================================
   mm-frontend:
-    # Build image from local Dockerfile
     build:
       context: ./frontend
       dockerfile: Dockerfile
     
-    # Container name
     container_name: mm-frontend
     
-    # Restart policy
     restart: always
     
-    # Port mapping: expose port 80 to host
-    # Access frontend at http://localhost
     ports:
       - "80:80"
     
-    # Dependency on API service
-    # Frontend needs API to be available (though frontend can gracefully handle API unavailability)
     depends_on:
       - mm-api
     
-    # Configure httpd to allow CORS and proxying
-    # environment:
-    #   LOG_LEVEL: warn
-
-# ==========================================
-# NAMED VOLUMES
-# ==========================================
-# Named volumes are persistent storage managed by Docker
-# Data survives container restarts and removals (unless explicitly deleted)
 volumes:
-  # MongoDB data persistence
-  # Stores database files, indexes, etc.
   mongodb_data:
     driver: local
   
-  # MongoDB configuration persistence
-  # Stores configuration and settings
   mongodb_config:
     driver: local
-
-# ==========================================
-# NETWORKS
-# ==========================================
-# Services automatically connect to the default network
-# This enables service-to-service communication by container name
-# (Docker's internal DNS resolves container names to IPs)
