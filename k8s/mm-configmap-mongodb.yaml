@@ -8,8 +8,6 @@ metadata:
     app: mm-database
 
 data:
-  # MongoDB initialization script
-  # This script runs when MongoDB starts
   init-mongo.js: |
     // Connect to admin database for user setup
     db = db.getSiblingDB('admin');
