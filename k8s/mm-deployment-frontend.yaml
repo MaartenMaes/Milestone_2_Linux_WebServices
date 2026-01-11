@@ -48,7 +48,6 @@ spec:
               cpu: 200m
               memory: 128Mi
           
-          # Liveness probe for httpd
           livenessProbe:
             httpGet:
               path: /
@@ -58,7 +57,6 @@ spec:
             timeoutSeconds: 2
             failureThreshold: 3
           
-          # Readiness probe
           readinessProbe:
             httpGet:
               path: /
@@ -79,8 +77,6 @@ metadata:
     app: mm-frontend
 
 spec:
-  # NodePort: expose service on host machine
-  # Allows external access (combined with kind port mappings)
   type: NodePort
   
   selector:
@@ -90,16 +86,9 @@ spec:
     - name: http
       port: 80
       targetPort: 80
-      # nodePort: Kubernetes assigns a port between 30000-32767
-      # Omit to let Kubernetes assign automatically
       nodePort: 30080
 
 ---
-# ==========================================
-# INGRESS RESOURCE
-# ==========================================
-# Ingress provides HTTP(S) routing and load balancing
-# Requires an ingress controller (installed by kind automatically)
 
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -111,25 +100,19 @@ metadata:
     app: mm-frontend
 
 spec:
-  # Ingress class (which controller handles this ingress)
   ingressClassName: nginx
-  # Ingress rules
   rules:
-    # HTTP rule for localhost
     - host: "localhost"
       http:
         paths:
-          # Catch all paths
           - path: /
             pathType: Prefix
             backend:
               service:
-                # Route to frontend service
                 name: mm-frontend-service
                 port:
                   number: 80
     
-    # Alternative: route by IP (for kind)
     - http:
         paths:
           - path: /
