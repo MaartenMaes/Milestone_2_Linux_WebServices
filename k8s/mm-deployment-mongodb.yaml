@@ -9,28 +9,18 @@ metadata:
     version: v1
 
 spec:
-  # replicas: number of pod copies to run
-  # MongoDB with 1 replica = single instance (no replication)
   replicas: 1
   
-  # selector: labels that identify pods this deployment manages
-  # Deployment controller uses this to find and manage pods
   selector:
     matchLabels:
       app: mm-database
   
-  # Strategy defines how updates are rolled out
   strategy:
-    # RollingUpdate: gradually replace old pods with new
     type: RollingUpdate
     rollingUpdate:
-      # maxUnavailable: max pods unavailable during update
       maxUnavailable: 0
-      # maxSurge: max extra pods during update
       maxSurge: 1
   
-  # Template defines pod specification
-  # Deployment creates pods from this template
   template:
     metadata:
       labels:
@@ -38,37 +28,25 @@ spec:
         tier: backend
     
     spec:
-      # Restart policy for pods
       restartPolicy: Always
-      
-      # Init containers run before app containers
-      # Used for setup tasks
+
       initContainers:
         - name: init-mongodb
           image: mongo:7.0
-          # Commands to execute
           command: ['sh', '-c', 'echo "Initializing MongoDB..."']
       
-      # Containers in the pod
       containers:
         - name: mm-database
           image: mongo:7.0
           
-          # Image pull policy
-          # IfNotPresent: only pull if not cached (faster)
-          # Always: always pull (ensures latest version)
-          # Never: never pull (must exist locally)
           imagePullPolicy: IfNotPresent
           
-          # Port exposed by container
           ports:
             - name: mongo
               containerPort: 27017
               protocol: TCP
           
-          # Environment variables from multiple sources
           env:
-            # From Secret
             - name: MONGO_INITDB_ROOT_USERNAME
               valueFrom:
                 secretKeyRef:
@@ -81,53 +59,35 @@ spec:
                   name: mm-mongodb-secret
                   key: MONGO_INITDB_ROOT_PASSWORD
             
-            # From ConfigMap
             - name: MONGO_INITDB_DATABASE
               value: milestone2
           
-          # Resource requests and limits
-          # Requests: minimum resources guaranteed to pod
-          # Limits: maximum resources pod can consume
           resources:
             requests:
-              # CPU request: 100 millicores (0.1 CPU)
               cpu: 100m
-              # Memory request: 256 megabytes
               memory: 256Mi
             limits:
               cpu: 500m
               memory: 512Mi
           
-          # Volume mounts: attach volumes to pod
           volumeMounts:
-            # Mount PersistentVolumeClaim
             - name: mongodb-storage
-              # Container path where volume is accessible
               mountPath: /data/db
             - name: mongodb-configdb
               mountPath: /data/configdb
           
-          # Liveness probe: restart if unhealthy
-          # Checks if MongoDB is still responsive
           livenessProbe:
-            # exec: run command and check exit code
             exec:
               command:
                 - mongosh
                 - --quiet
                 - --eval
                 - "db.adminCommand('ping')"
-            # Initial delay before first check
             initialDelaySeconds: 30
-            # Check every 10 seconds
             periodSeconds: 10
-            # If probe takes >5s, consider it failed
             timeoutSeconds: 5
-            # Restart after 3 consecutive failures
             failureThreshold: 3
           
-          # Readiness probe: add to load balancing if healthy
-          # Checks if MongoDB accepts connections
           readinessProbe:
             exec:
               command:
@@ -140,25 +100,14 @@ spec:
             timeoutSeconds: 3
             failureThreshold: 3
       
-      # Volumes available to all containers in pod
       volumes:
-        # PersistentVolumeClaim reference
         - name: mongodb-storage
           persistentVolumeClaim:
-            # Matches PVC name from mm-persistent-storage.yaml
             claimName: mm-mongodb-pvc
         
         - name: mongodb-configdb
           emptyDir: {}
-          # emptyDir: temporary volume (deleted when pod terminates)
-          # Useful for temporary files
-
 ---
-# ==========================================
-# KUBERNETES SERVICE
-# ==========================================
-# Service creates stable DNS name for pods
-# Pods are ephemeral (come and go), service IP is stable
 
 apiVersion: v1
 kind: Service
@@ -170,29 +119,18 @@ metadata:
     app: mm-database
 
 spec:
-  # Type determines how service is exposed
-  # ClusterIP: only accessible within cluster (default)
-  # NodePort: accessible via node IP + port
-  # LoadBalancer: external load balancer (requires cloud provider)
   type: ClusterIP
   
-  # Selector: service routes traffic to pods matching these labels
   selector:
     app: mm-database
   
-  # Port configuration
   ports:
     - name: mongodb
-      # Port exposed by service (ClusterIP:port)
       port: 27017
-      # targetPort: port on pod container
       targetPort: 27017
       protocol: TCP
   
-  # sessionAffinity: stick client to same pod
-  # ClientIP: route requests from same IP to same pod
   sessionAffinity: ClientIP
   sessionAffinityConfig:
     clientIP:
-      # Timeout for affinity
       timeoutSeconds: 10800
