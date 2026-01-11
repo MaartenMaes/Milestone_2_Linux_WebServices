@@ -1,0 +1,83 @@
+# ==========================================
+# PERSISTENT VOLUME
+# ==========================================
+apiVersion: v1
+kind: PersistentVolume
+
+metadata:
+  name: mm-mongodb-pv
+  labels:
+    type: local
+    app: mm-database
+
+spec:
+  # Storage capacity - this volume can hold up to 2Gi of data
+  capacity:
+    storage: 2Gi
+  
+  # accessMode specifies how the volume can be accessed
+  # ReadWriteOnce: mounted by single node, read-write
+  # ReadOnlyMany: mounted by multiple nodes, read-only
+  # ReadWriteMany: mounted by multiple nodes, read-write (requires special storage backends)
+  accessModes:
+    - ReadWriteOnce
+  
+  # persistentVolumeReclaimPolicy determines what happens when PVC is deleted
+  # Delete: PV is deleted
+  # Retain: PV remains (administrator must clean up manually)
+  # Recycle: PV content is deleted, volume reused
+  persistentVolumeReclaimPolicy: Delete
+  
+  # hostPath uses a local directory on the node
+  # NOT suitable for production (data lost if node fails)
+  # For kind, it's acceptable for testing
+  hostPath:
+    # Path on the host machine or kind container
+    path: "/mnt/data/mm-mongodb"
+    # DirectoryOrCreate: create if doesn't exist
+    type: DirectoryOrCreate
+
+---
+# ==========================================
+# PERSISTENT VOLUME CLAIM
+# ==========================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+
+metadata:
+  name: mm-mongodb-pvc
+  namespace: mm-project
+  labels:
+    app: mm-database
+
+spec:
+  # accessModes must match PV
+  accessModes:
+    - ReadWriteOnce
+  
+  # resources.requests specifies how much storage needed
+  # Kubernetes finds a PV with at least this capacity
+  resources:
+    requests:
+      storage: 1Gi
+  
+  # Optional: selector to bind to specific PV
+  # If omitted, Kubernetes finds a matching PV automatically
+  # selector:
+  #   matchLabels:
+  #     type: local
+  #     app: mm-database
+
+---
+# ==========================================
+# STORAGE CLASS (alternative to hostPath)
+# ==========================================
+# For production clusters, use StorageClass
+# kind clusters include a default 'standard' StorageClass
+
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: mm-storage-class
+provisioner: rancher.io/local-path
+# This provisioner is included in kind by default

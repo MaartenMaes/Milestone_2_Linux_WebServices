@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: mm-mongodb-config
+  namespace: mm-project
+  labels:
+    app: mm-database
+
+data:
+  # MongoDB initialization script
+  # This script runs when MongoDB starts
+  init-mongo.js: |
+    // Connect to admin database for user setup
+    db = db.getSiblingDB('admin');
+    
+    // Create root user if not exists
+    // This is handled by MONGO_INITDB_* env vars
+    
+    // Switch to milestone2 database
+    db = db.getSiblingDB('milestone2');
+    
+    // Create default user collection with initial document
+    db.users.insertOne({
+      name: "maarten",
+      createdAt: new Date(),
+      status: "active"
+    });
+    
+    // Create index on name field for faster queries
+    db.users.createIndex({ "name": 1 });

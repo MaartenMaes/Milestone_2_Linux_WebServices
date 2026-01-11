@@ -1,0 +1,19 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+
+name: mm-cluster
+
+nodes:
+  - role: control-plane
+  
+  - role: worker
+    labels:
+      node-type: worker-1
+  
+  - role: worker
+    labels:
+      node-type: worker-2
+
+networking:
+  podSubnet: 10.244.0.0/16
+  serviceSubnet: 10.96.0.0/12
