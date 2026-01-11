@@ -11,12 +11,10 @@ metadata:
 spec:
   replicas: 1
   
-  # Strategy for rolling updates
   strategy:
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: 0
-      # Wait for new pod to be ready before terminating old
       maxSurge: 1
   
   selector:
@@ -29,18 +27,11 @@ spec:
         app: mm-api
         tier: backend
       annotations:
-        # Annotations for informational metadata
         description: "Node.js API backend for milestone 2"
     
     spec:
-      # RestartPolicy: what to do if container stops
-      # Always: restart container immediately
-      # OnFailure: only restart if exit code != 0
-      # Never: don't restart
       restartPolicy: Always
       
-      # Service account for API pod identity
-      # Default service account has minimal permissions
       serviceAccountName: default
       
       containers:
@@ -53,11 +44,10 @@ spec:
               containerPort: 3000
               protocol: TCP
           
-          # Environment variables for application configuration
           env:
             # MongoDB connection string
             # Service name (mm-database-service) resolves via DNS
-            # Domain format: <service-name>.<namespace>.svc.cluster.local
+            # format: <service-name>.<namespace>.svc.cluster.local
             - name: MONGO_URI
               value: "mongodb://root:rootpassword@mm-database-service.mm-project.svc.cluster.local:27017/milestone2?authSource=admin"
             
@@ -77,7 +67,7 @@ spec:
           
           # Liveness probe: restart if unhealthy
           livenessProbe:
-            # httpGet: make HTTP request to pod
+            # HTTP request to pod
             httpGet:
               # HTTP endpoint to check
               path: /health
@@ -100,23 +90,15 @@ spec:
             successThreshold: 1
             failureThreshold: 3
           
-          # Security context
           securityContext:
-            # Run as non-root user for security
-            runAsNonRoot: false  # MongoDB client may require root
-            # Prevent privilege escalation
+            runAsNonRoot: false  
             allowPrivilegeEscalation: false
-            # Read-only root filesystem
             readOnlyRootFilesystem: false
           
-          # Lifecycle hooks
           lifecycle:
-            # preStop: run before container termination
             preStop:
               exec:
                 command: ["/bin/sh", "-c", "sleep 15"]
-                # Wait 15 seconds for load balancer to stop sending traffic
-
 ---
 apiVersion: v1
 kind: Service
@@ -140,12 +122,6 @@ spec:
       protocol: TCP
 
 ---
-# ==========================================
-# POD DISRUPTION BUDGET
-# ==========================================
-# Specifies minimum pods that must be available during disruptions
-# Prevents accidental downtime during maintenance
-
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 
@@ -154,8 +130,6 @@ metadata:
   namespace: mm-project
 
 spec:
-  # minAvailable: minimum pods that must stay running
-  # If replicas=1, this prevents voluntary disruptions
   minAvailable: 1
   
   selector:
