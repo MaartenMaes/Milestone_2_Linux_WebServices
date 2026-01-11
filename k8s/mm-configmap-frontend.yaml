@@ -8,13 +8,8 @@ metadata:
     app: mm-frontend
     version: v1
 
-# Data contains key-value pairs
 data:
-  # index.html with template placeholders
-  # In real scenarios, we'd use a web server to substitute these
-  # For now, we'll include it in the Dockerfile
   API_ENDPOINT: "http://mm-api-service:3000"
   
-  # Other frontend configuration
   APP_TITLE: "Milestone 2"
   LOG_LEVEL: "info"
